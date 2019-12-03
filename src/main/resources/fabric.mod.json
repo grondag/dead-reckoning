@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "dead_reckoning",
+  "version": "${version}",
+
+  "name": "Dead Reckoning",
+  "description": "Simple in-game navigation waypoints",
+  "authors": [
+    "Grondag"
+  ],
+  "contact": {
+    "homepage": "https://github.com/grondag/dead-reckoning",
+    "sources": "https://github.com/grondag/dead-reckoning"
+  },
+
+  "license": "MIT",
+  "icon": "assets/dead_reckoning/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+  	"main": []
+  },
+  "mixins": [
+  	"dead_reckoning.client.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.7.1",
+    "minecraft": "~1.15-pre3"
+  },
+  "custom": {
+    "modmenu:api": false
+  }
+}
