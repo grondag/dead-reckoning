@@ -48,14 +48,14 @@ public enum WaypointRenderer {
 		RenderSystem.pushMatrix();
 		RenderSystem.multMatrix(matrixStack.peek().getModel());
 
-		RenderSystem.disableDepthTest();
-		RenderSystem.shadeModel(7425);
+		RenderSystem.shadeModel(GL11.GL_FLAT);
 		RenderSystem.enableBlend();
 		RenderSystem.defaultBlendFunc();
 		RenderSystem.enableAlphaTest();
 		RenderSystem.defaultAlphaFunc();
 		RenderSystem.polygonOffset(-3.0F, -3.0F);
 		RenderSystem.enablePolygonOffset();
+		RenderSystem.enableDepthTest();
 		RenderSystem.disableTexture();
 
 		final Tessellator tessellator = Tessellator.getInstance();
@@ -72,26 +72,12 @@ public enum WaypointRenderer {
 			shouldRenderBeacons |= p.showBeacon;
 		}
 
-		if(shouldRenderPoints) {
-			bufferBuilder.begin(GL11.GL_QUADS, VertexFormats.POSITION_COLOR);
-
-			for (final WaypointRenderInfo p : POINTS)  {
-				if (p.isInFieldOfView) {
-					renderWaypoint(bufferBuilder, cameraPos, p, false);
-				}
-			}
-
-			tessellator.draw();
-		}
-
-		RenderSystem.enableDepthTest();
-
 		if(shouldRenderBeacons) {
 			bufferBuilder.begin(GL11.GL_QUADS, VertexFormats.POSITION_COLOR);
 
 			for (final WaypointRenderInfo p : POINTS)  {
 				if (p.showBeacon) {
-					renderWaypoint(bufferBuilder, cameraPos, p, true);
+					renderBeacon(bufferBuilder, cameraPos, p);
 				}
 			}
 
@@ -100,20 +86,30 @@ public enum WaypointRenderer {
 
 		RenderSystem.polygonOffset(0.0F, 0.0F);
 		RenderSystem.disablePolygonOffset();
-		RenderSystem.shadeModel(7424);
 
-		RenderSystem.enableAlphaTest();
-		RenderSystem.depthMask(true);
-		RenderSystem.enableTexture();
-		RenderSystem.popMatrix();
-		//		RenderSystem.disableDepthTest();
-		//		RenderSystem.disableCull();
-		//		RenderSystem.alphaFunc(516, 0.003921569F);
-		//		MinecraftClient.getInstance().gameRenderer.getLightmapTextureManager().enable();
-		//		RenderSystem.colorMask(false, false, false, false);
+		Quaternion labelRotation = null;
 
 		if(shouldRenderPoints) {
-			final Quaternion labelRotation = camera.method_23767();
+			RenderSystem.disableDepthTest();
+			labelRotation = camera.getRotation();
+
+			bufferBuilder.begin(GL11.GL_TRIANGLES, VertexFormats.POSITION_COLOR);
+
+			for (final WaypointRenderInfo p : POINTS)  {
+				if (p.isInFieldOfView) {
+					renderWaypoint(bufferBuilder, cameraPos, p);
+				}
+			}
+
+			tessellator.draw();
+		}
+
+		RenderSystem.enableAlphaTest();
+		//RenderSystem.depthMask(true);
+		RenderSystem.enableTexture();
+		RenderSystem.popMatrix();
+
+		if(shouldRenderPoints) {
 			final VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(bufferBuilder);
 			final TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
 
@@ -126,14 +122,67 @@ public enum WaypointRenderer {
 			immediate.draw();
 		}
 
+
 		RenderSystem.lineWidth(1.0F);
 	}
 
-	static void renderWaypoint(BufferBuilder bufferBuilder, Vec3d cameraPos, WaypointRenderInfo point, boolean beacon) {
+	static void renderWaypoint(BufferBuilder bufferBuilder, Vec3d cameraPos, WaypointRenderInfo point) {
+		final double scale = Math.min(point.distance, WaypointRenderInfo.BLOCK_DIST) * 0.0025;
+		final float alpha = 0.75f;
+		final float bump = 0.5f;
+
+		final double x = point.renderX;
+		final double y = point.renderY;
+		final double z = point.renderZ;
+		final double y0 = y - (scale + bump) * 1.25;
+		final double y1 = y + (scale + bump) * 1.25;
+		final double x0 = x - bump - scale;
+		final double x1 = x + bump + scale;
+		final double z0 = z - bump - scale;
+		final double z1 = z + bump + scale;
+		final float red = point.red;
+		final float green = point.green;
+		final float blue = point.blue;
+
+		bufferBuilder.vertex(x, y1, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z0).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z0).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y1, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z1).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z0).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y1, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z1).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z1).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y1, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z0).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z1).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y0, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z0).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z0).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y0, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z0).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z1).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y0, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x1, y, z1).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z1).color(red, green, blue, alpha).next();
+
+		bufferBuilder.vertex(x, y0, z).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z1).color(red, green, blue, alpha).next();
+		bufferBuilder.vertex(x0, y, z0).color(red, green, blue, alpha).next();
+	}
+
+
+	static void renderBeacon(BufferBuilder bufferBuilder, Vec3d cameraPos, WaypointRenderInfo point) {
 		final double scale = Math.min(point.distance, WaypointRenderInfo.BLOCK_DIST) * 0.0025;
 
-		final double y0 = beacon ? -cameraPos.y : point.renderY - scale - 0.5;
-		final double y1 = beacon ? 256 - cameraPos.y : point.renderY + 0.5 + scale;
+		final double y0 = -cameraPos.y;
+		final double y1 = 256 - cameraPos.y;
 		final double x0 = point.renderX - 0.5 - scale;
 		final double x1 = point.renderX + 0.5 + scale;
 		final double z0 = point.renderZ - 0.5 - scale;
